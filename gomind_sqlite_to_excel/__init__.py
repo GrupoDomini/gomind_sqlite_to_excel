@@ -22,7 +22,7 @@ class SqliteToExcel:
             
             for table_name in list_tables_name:
                 fields_name = self.finding_the_names_of_the_fields(cur, table_name)
-                data = self.query_all(cur, table_name)
+                data = self.query_all(cur, table_name, fields_name)
                 self.list_to_excel(fields_name, table_name, data)
         
     def connecting_to_db(self) -> sqlite3.connect:
@@ -53,11 +53,12 @@ class SqliteToExcel:
         
         return [column[1] for column in fields_name]
     
-    def query_all(self, cur, table_name) -> list:
+    def query_all(self, cur, table_name, columns) -> list:
         """
         Faz uma consulta de todos os dados da tabela e retorna uma lista de todos eles.
         """
-        cur.execute(f'SELECT * FROM "{table_name}"')
+        columns = ', '.join(columns)
+        cur.execute(f'SELECT {columns} FROM "{table_name}"')
         return cur.fetchall()
     
     def list_to_excel(self, fields_name, table_name, data) -> None:
