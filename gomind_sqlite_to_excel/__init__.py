@@ -1,6 +1,6 @@
 import os
 import sqlite3
-from openpyxl import Workbook
+from openpyxl import Workbook, load_workbook
 from openpyxl.styles import Font
 
 
@@ -8,10 +8,12 @@ class SqliteToExcel:
     """
     Converte qualquer banco SQLITE em excel(.xlsx).
     """
-    def __init__(self, db_path : str, download_path : str) -> None:
+
+    def __init__(self, db_path : str, download_path : str, xlsx_name = None) -> None:
         
         self.db_path = db_path
         self.download_path = download_path
+        self.xlsx_name = xlsx_name
         self.con = None
         self._process()
         
@@ -19,12 +21,13 @@ class SqliteToExcel:
         with self.connecting_to_db() as self.con:
             cur = self.con.cursor()
             list_tables_name = self.finding_the_names_of_the_tables(cur)
+            self.create_excel()
             
             for table_name in list_tables_name:
                 fields_name = self.finding_the_names_of_the_fields(cur, table_name)
                 data = self.query_all(cur, table_name, fields_name)
-                self.list_to_excel(fields_name, table_name, data)
-        
+                self.list_to_sheet(table_name, fields_name, data)
+            
     def connecting_to_db(self) -> sqlite3.connect:
         """
         Cria uma conexão com o banco.
@@ -61,26 +64,40 @@ class SqliteToExcel:
         cur.execute(f'SELECT {columns} FROM "{table_name}"')
         return cur.fetchall()
     
-    def list_to_excel(self, fields_name, table_name, data) -> None:
+    def create_excel(self) -> None:
         """
-        Cria um arquivo .xlsx a partir dos nomes dos campos e dos dados de cada campo
+        Cria um excel
         """
-        self.download_path = os.path.join(self.download_path, f"{table_name}.xlsx")
+        if self.xlsx_name is None:
+            self.download_path = os.path.join(self.download_path, "consultas.xlsx")
+        else:
+            self.download_path = os.path.join(self.download_path, f"{self.xlsx_name}.xlsx")
         
         wb = Workbook()
-        ws = wb.active
+        wb.save(self.download_path)
+    
+    def list_to_sheet(self, table_name, fields_name, data) -> None:
+        """
+        Passa os dados que estão em listas para dentro de uma Sheet
+        """
+        load_wb = load_workbook(self.download_path)
         
-        # Deixa em negrito as celulas da linha 1
+        # Remove a sheet padrão
+        if "Sheet" in load_wb.sheetnames:
+            load_wb.remove(load_wb["Sheet"])
+        
+        load_wb.create_sheet(title=f'{table_name}')
+        load_ws = load_wb[table_name]
+        
         bold_font = Font(bold=True)
         for i, field in enumerate(fields_name):
-            cell = ws.cell(row=1, column=i+1, value=field)
+            cell = load_ws.cell(row=1, column=i+1, value=field)
             cell.font = bold_font
         
-        # Adiciona linha por linha os dados
         for row in data:
-            ws.append(row)
-            
-        wb.save(self.download_path)
+            load_ws.append(row)
+        
+        load_wb.save(self.download_path)
         
     def __del__(self) -> None:
         """
@@ -91,4 +108,4 @@ class SqliteToExcel:
         
         
 if __name__ in "__main__":
-    conversor = SqliteToExcel("mia.db", "download_xlsx")
+    conversor = SqliteToExcel("mia.db", "download_xlsx", "nome_do_excel")
