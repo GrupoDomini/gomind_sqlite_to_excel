@@ -98,6 +98,7 @@ class SqliteToExcel:
             load_ws.append(row)
         
         load_wb.save(self.download_path)
+        load_wb.close()
         
     def __del__(self) -> None:
         """

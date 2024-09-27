@@ -1,2 +1,7 @@
 __pycache__
 venv/
+test_lib.py
+*.db
+gomind_requests/*
+gomind_requests/
+.env
